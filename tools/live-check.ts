@@ -33,11 +33,15 @@ admin.stop();
 const readOnly = await session(process.env.ROUTA_READONLY_TOKEN);
 const refused = await readOnly.tool("preview_change", { changes: change });
 if (!refused.isError) failures.push("a read-only token got through preview_change");
+const before = (await readOnly.tool("get_settings")).content[0].text;
+const compared = await readOnly.tool("compare_to_baseline");
+if (compared.isError || !/Nothing was changed\.$/.test(compared.content[0].text)) failures.push(`compare_to_baseline with a read-only token: ${compared.content[0].text}`);
+if ((await readOnly.tool("get_settings")).content[0].text !== before) failures.push("compare_to_baseline changed a setting");
 readOnly.stop();
 
 if (failures.length) {
   console.log(failures.map((f) => `FAIL ${f}`).join("\n"));
   process.exitCode = 1;
 } else {
-  console.log("The live run passed: an admin token reads and previews, and a read-only token is refused.");
+  console.log("The live run passed: an admin token reads and previews, a read-only token is refused, and compares to the baseline without changing anything.");
 }

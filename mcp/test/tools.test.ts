@@ -66,3 +66,13 @@ test("a read-only token can't use copy_group_access, set_session_length or the p
   await assert.rejects(setSessionLengthTool.handler({ hours: 8 }), /read-only/);
   assert.equal(patches.length, 0);
 });
+
+test("preview_change refuses a change it can't show, and applies only the fields it showed", async () => {
+  const { patches } = fakePlatform();
+  await assert.rejects(previewChangeTool.handler({ changes: [{ ...change, allowed: "false" }] as never }), /isn't one I can show/);
+  await assert.rejects(previewChangeTool.handler({ changes: [{ type: "other", id: "x", value: 1 }] as never }), /isn't one I can show/);
+  await assert.rejects(previewChangeTool.handler({ changes: "not a list" as never }), /as a list/);
+  const id = idOf(await previewChangeTool.handler({ changes: [{ ...change, extra: "unseen" }] as never }));
+  await applyChangeTool.handler({ id });
+  assert.deepEqual(patches, [change]);
+});
